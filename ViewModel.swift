@@ -1,15 +1,25 @@
 import Foundation
 
 class ViewModel: ObservableObject {
+    
+    let accessToken = "BQDB3Aa8NjQIpm2xB7F0-XVVeVKa3P_dLVpEIaF63MeKrFg2ZVuFLD-5zIc5tDIAED_7fnwgLxIpZ3BlQZQ7xMwokytH4n4ZN8i15RYC24tndHW3R-U"
 
-    let spotifyAPIURL = URL(string: "https://api.spotify.com/v1/tracks?ids=7ouMYWpwJ422jRcDASZB7P%2C4VqPOruhp5EdPBeR92t6lQ%2C2takcwOaAZWiXQijPHIx7B")!
+    func fetchData(searchTerm: String, completion: @escaping (SearchResponse?) -> Void) {
+        guard let encodedSearchTerm = searchTerm.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) else {
+            print("Erro ao codificar o termo de pesquisa")
+            completion(nil)
+            return
+        }
+        
+        let urlString = "https://api.spotify.com/v1/search?q=\(encodedSearchTerm)&type=track&offset=0"
+        guard let spotifyAPIURL = URL(string: urlString) else {
+            print("Erro ao construir a URL da API")
+            completion(nil)
+            return
+        }
 
-    let accessToken = "BQCpKbIay1Cm3eziKpZW0nT0O-cJ5EfhlJ_3J9N8AKNnPhnDbT8vlZmk_mrSGp37Ugh_nITwC3rbjNioNSULQ6btu5JR4GNbTtcVArdF-yTFrrm7ISA"
-
-    func fetchData(completion: @escaping ([Track]?) -> Void) {
         var request = URLRequest(url: spotifyAPIURL)
         request.httpMethod = "GET"
-
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         
         let task = URLSession.shared.dataTask(with: request) { data, response, error in
@@ -18,15 +28,9 @@ class ViewModel: ObservableObject {
                 completion(nil)
                 return
             }
-
             do {
-                let result = try JSONDecoder().decode([String: [Track]].self, from: data)
-                if let tracks = result["tracks"] {
-                    completion(tracks)
-                } else {
-                    print("Não foi possível encontrar as faixas no JSON")
-                    completion(nil)
-                }
+                let result = try JSONDecoder().decode(SearchResponse.self, from: data)
+                completion(result)
             } catch {
                 print("Erro ao decodificar JSON: \(error)")
                 completion(nil)
